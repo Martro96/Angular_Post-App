@@ -1,9 +1,14 @@
 import { createReducer, on } from "@ngrx/store";
 import { AuthDTO } from "../models/auth.dto";
-import { AuthState } from "src/app/app.reducer";
 import { login, loginFailure, loginSuccess, logout } from "../actions/auth.actions";
-import { Action } from "rxjs/internal/scheduler/Action";
-import { state } from "@angular/animations";
+
+//Me traigo la interfaz y la defino aqui para controlar sólo esta
+export interface AuthState {
+    credentials: AuthDTO;
+    loading: boolean;
+    loaded: boolean;
+    error: any;
+}
 
 export const InitialState: AuthState = {
     credentials: {
