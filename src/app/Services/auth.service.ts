@@ -23,7 +23,13 @@ export class AuthService {
   // login(auth: AuthDTO): Promise<AuthToken> {
   //   return this.http.post<AuthToken>(this.urlBlogUocApi, auth).toPromise();
   // }
-  login(auth: AuthDTO): Observable<AuthToken> {
-    return this.http.post<AuthToken>(this.urlBlogUocApi, auth)
+
+  //Así lo tenía para el ejercicio 1:
+  // login(auth: AuthDTO): Observable<AuthToken> {
+  //   return this.http.post<AuthToken>(this.urlBlogUocApi, auth)
+  // }
+  //Lo cambio a esto para no tener problemas con el AuthDTO en el efecto Login
+  login(credentials: {email: string; password: string}): Observable<AuthToken> {
+    return this.http.post<AuthToken>(this.urlBlogUocApi, credentials)
   }
 }

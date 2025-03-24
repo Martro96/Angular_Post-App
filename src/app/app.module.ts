@@ -18,6 +18,7 @@ import { AuthInterceptorService } from './Services/auth-interceptor.service';
 import { FormatDatePipe } from './Pipes/format-date.pipe';
 import { DashboardComponent } from './Components/dashboard/dashboard.component';
 import { StoreModule } from '@ngrx/store';
+import { EffectsModule } from '@ngrx/effects';
 
 @NgModule({
   declarations: [
@@ -41,6 +42,7 @@ import { StoreModule } from '@ngrx/store';
     ReactiveFormsModule,
     HttpClientModule,
     StoreModule.forRoot({}, {}),
+    EffectsModule.forRoot([]),
   ],
   providers: [
     {
