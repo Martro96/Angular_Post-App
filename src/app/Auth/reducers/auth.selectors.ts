@@ -10,4 +10,9 @@ export const selectUserId = createSelector(
 export const selectAccessToken = createSelector(
     selectAuthState, 
     (authState) => authState.credentials.access_token
-)
+);
+
+export const selectAuthError = createSelector(
+    selectAuthState,
+    (state) => state.error
+  );
