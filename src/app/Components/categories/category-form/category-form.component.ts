@@ -1,3 +1,5 @@
+// import { error } from 'console';
+// import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { Component, OnInit } from '@angular/core';
 import {
   UntypedFormBuilder,
@@ -6,11 +8,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-// import { error } from 'console';
+
 import { CategoryDTO } from 'src/app/Models/category.dto';
 import { CategoryService } from 'src/app/Services/category.service';
-import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { SharedService } from 'src/app/Services/shared.service';
+import { AppState } from 'src/app/app.reducer';
+import { select, Store } from '@ngrx/store';
+import { selectUserId } from 'src/app/Auth/reducers/auth.selectors';
 
 @Component({
   selector: 'app-category-form',
@@ -29,6 +33,7 @@ export class CategoryFormComponent implements OnInit {
   private isUpdateMode: boolean;
   private validRequest: boolean;
   private categoryId: string | null;
+  private userId!: string;
 
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -36,8 +41,9 @@ export class CategoryFormComponent implements OnInit {
     private formBuilder: UntypedFormBuilder,
     private router: Router,
     private sharedService: SharedService,
-    private localStorageService: LocalStorageService
-  ) {
+    private store: Store<AppState>
+  ) // private localStorageService: LocalStorageService
+  {
     this.isValidForm = null;
     this.categoryId = this.activatedRoute.snapshot.paramMap.get('id');
     this.category = new CategoryDTO('', '', '');
@@ -96,26 +102,25 @@ export class CategoryFormComponent implements OnInit {
   // }
 
   ngOnInit(): void {
+    this.store.pipe(select(selectUserId)).subscribe((userId) => {
+      this.userId = userId;
 
-    if (!this.categoryId) {
-      return;
-    }
-    this.isUpdateMode = true;
+      if (this.categoryId) {
+        this.isUpdateMode = true;
 
-    this.categoryService.getCategoryById(this.categoryId).subscribe({
-      next: (category) => {
-        this.title.setValue(category.title);
-        this.description.setValue(category.description);
-        this.css_color.setValue(category.css_color);
+        this.categoryService.getCategoryById(this.categoryId).subscribe({
+          next: (category) => {
+            this.title.setValue(category.title);
+            this.description.setValue(category.description);
+            this.css_color.setValue(category.css_color);
+          },
 
-      },
-
-      error: (error: any) => {
-        this.sharedService.errorLog(error.error);
+          error: (error: any) => {
+            this.sharedService.errorLog(error.error);
+          },
+        });
       }
-
     });
-
   }
   // private async editCategory(): Promise<boolean> {
   //   let errorResponse: any;
@@ -149,32 +154,32 @@ export class CategoryFormComponent implements OnInit {
   //   return responseOK;
   // }
 
-
-  editCategory(): void { //Lo cambiamos a void porque subscribe ya es asíncrono
-    const userId = this.localStorageService.get('user_id');
+  editCategory(categoryId: string, userId: string): void {
+    // const userId = this.localStorageService.get('user_id');
 
     if (!this.categoryId || !userId) {
       return;
     }
 
-    this.category.userId = userId //Nos aseguramos de que el usuario esté registrado
+    this.category.userId = userId; //Nos aseguramos de que el usuario esté registrado
+    this.category.categoryId = categoryId;
 
-    this.categoryService.updateCategory(this.categoryId, this.category).subscribe({
-
-      // Si quisieramos usar la repsuesta de la API, tendríamos que pasarlo por next
-      // next: (updatedCategory) => { // Ahora usamos la respuesta de la API
-      //   this.category = updatedCategory; // Actualizamos la categoría en la UI
-
-      next: () => {
-        this.sharedService.managementToast('categoryFeedback', true);
-        this.router.navigateByUrl('categories');
-
-      },
-      error: (error) => {
-        this.sharedService.errorLog(error.error);
-        this.sharedService.managementToast('categoryFeedback', false, error.error);
-      }
-    });
+    this.categoryService
+      .updateCategory(this.categoryId, this.category)
+      .subscribe({
+        next: () => {
+          this.sharedService.managementToast('categoryFeedback', true);
+          this.router.navigateByUrl('categories');
+        },
+        error: (error) => {
+          this.sharedService.errorLog(error.error);
+          this.sharedService.managementToast(
+            'categoryFeedback',
+            false,
+            error.error
+          );
+        },
+      });
   }
   // private async createCategory(): Promise<boolean> {
   //   let errorResponse: any;
@@ -205,12 +210,12 @@ export class CategoryFormComponent implements OnInit {
   // }
 
   createCategory(): void {
-    const userId = this.localStorageService.get('user_id');
+    // const userId = this.localStorageService.get('user_id');
 
-    if (!userId) {
+    if (!this.userId) {
       return;
     }
-    this.category.userId = userId;
+    this.category.userId = this.userId;
 
     this.categoryService.createCategory(this.category).subscribe({
       next: (category) => {
@@ -219,8 +224,12 @@ export class CategoryFormComponent implements OnInit {
       },
       error: (error) => {
         this.sharedService.errorLog(error.error);
-        this.sharedService.managementToast('categoryFeedback', false, error.error);
-      }
+        this.sharedService.managementToast(
+          'categoryFeedback',
+          false,
+          error.error
+        );
+      },
     });
   }
 
@@ -244,37 +253,45 @@ export class CategoryFormComponent implements OnInit {
 
   saveCategory(): void {
     this.isValidForm = false;
-  
+
     if (this.categoryForm.invalid) {
       return;
     }
-  
+
     this.isValidForm = true;
     this.category = this.categoryForm.value;
-    this.category.userId = this.localStorageService.get('user_id')!; //Tenemos que indicar a que usuario le pertenece la categoria
+    this.category.userId = this.userId;
 
-  
-    if (this.isUpdateMode && this.categoryId) { //El updateMode nos permite saber si estamos editando la categoría o si vamos a crear una nueva
+    // this.category.userId = this.localStorageService.get('user_id')!; //Tenemos que indicar a que usuario le pertenece la categoria
+
+    if (this.isUpdateMode && this.categoryId) {
+      //El updateMode nos permite saber si estamos editando la categoría o si vamos a crear una nueva
       this.category = this.categoryForm.value;
-      this.category.categoryId = this.categoryId;
-      this.category.userId = this.localStorageService.get('user_id')!;
-      
+      // this.category.userId = this.localStorageService.get('user_id')!;
+
       console.log('EDITANDO categoría con ID:', this.categoryId);
       console.log('Objeto enviado:', this.category);
 
-      this.categoryService.updateCategory(this.categoryId, this.category).subscribe({
-        next: () => {
-          this.validRequest = true; // Si la actualización fue exitosa
-          this.sharedService.managementToast('categoryFeedback', true);
-          this.router.navigateByUrl('categories'); // Redirigir tras actualizar
-        },
-        error: (error) => {
-          this.validRequest = false; // Si falló la petición
-          this.sharedService.errorLog(error.error);
-          this.sharedService.managementToast('categoryFeedback', false, error.error);
-        }
-      });
-    } else { //Aqui como el updateMode estaría false, estamos en el contexto de creación
+      this.categoryService
+        .updateCategory(this.categoryId, this.category)
+        .subscribe({
+          next: () => {
+            this.validRequest = true; // Si la actualización fue exitosa
+            this.sharedService.managementToast('categoryFeedback', true);
+            this.router.navigateByUrl('categories'); // Redirigir tras actualizar
+          },
+          error: (error) => {
+            this.validRequest = false; // Si falló la petición
+            this.sharedService.errorLog(error.error);
+            this.sharedService.managementToast(
+              'categoryFeedback',
+              false,
+              error.error
+            );
+          },
+        });
+    } else {
+      //Aqui como el updateMode estaría false, estamos en el contexto de creación
       this.categoryService.createCategory(this.category).subscribe({
         next: () => {
           this.validRequest = true;
@@ -284,10 +301,13 @@ export class CategoryFormComponent implements OnInit {
         error: (error) => {
           this.validRequest = false;
           this.sharedService.errorLog(error.error);
-          this.sharedService.managementToast('categoryFeedback', false, error.error);
-        }
+          this.sharedService.managementToast(
+            'categoryFeedback',
+            false,
+            error.error
+          );
+        },
       });
     }
   }
-  
-  }
+}
