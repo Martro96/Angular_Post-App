@@ -1,9 +1,12 @@
+// import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { CategoryDTO } from 'src/app/Models/category.dto';
 import { CategoryService } from 'src/app/Services/category.service';
-import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { SharedService } from 'src/app/Services/shared.service';
+import { AppState } from 'src/app/app.reducer';
+import { select, Store } from '@ngrx/store';
+import { selectUserId } from 'src/app/Auth/reducers/auth.selectors';
 
 @Component({
   selector: 'app-categories-list',
@@ -12,14 +15,15 @@ import { SharedService } from 'src/app/Services/shared.service';
 })
 export class CategoriesListComponent {
   categories!: CategoryDTO[];
+  private userId!: string;
 
   constructor(
     private categoryService: CategoryService,
     private router: Router,
-    private localStorageService: LocalStorageService,
-    private sharedService: SharedService
+    // private localStorageService: LocalStorageService,
+    private sharedService: SharedService, 
+    private store: Store<AppState>
   ) {
-    this.loadCategories();
   }
 
   // private async loadCategories(): Promise<void> {
@@ -37,8 +41,17 @@ export class CategoriesListComponent {
   //   }
   // }
 
-  loadCategories(): void {
-    const userId = this.localStorageService.get('user_id');
+  ngOnInit(): void {
+    this.store.pipe(select(selectUserId)).subscribe((userId) => {
+      if (userId) {
+        this.userId = userId;
+        this.loadCategories(userId);
+      }
+    })
+  }
+
+  loadCategories(userId: string): void {
+    //const userId = this.localStorageService.get('user_id');
 
     if (!userId) {
       return
@@ -97,7 +110,7 @@ export class CategoriesListComponent {
         this.sharedService.managementToast('Confirm delete category with id: ' + categoryId + ' .', true)
 
         if (!deleteResponse || !deleteResponse.affected || deleteResponse.affected > 0) {
-          this.loadCategories();
+          this.loadCategories(this.userId);
         }
       },
       error: (error) => {

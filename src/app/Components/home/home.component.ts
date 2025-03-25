@@ -1,12 +1,16 @@
+// import { error } from 'console';
+// import { HeaderMenus } from 'src/app/Models/header-menus.dto';
+// import { HeaderMenusService } from 'src/app/Services/header-menus.service';
+// import { LocalStorageService } from 'src/app/Services/local-storage.service';
+
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
-// import { error } from 'console';
-import { HeaderMenus } from 'src/app/Models/header-menus.dto';
+import { selectUserId } from 'src/app/Auth/reducers/auth.selectors';
 import { PostDTO } from 'src/app/Models/post.dto';
-import { HeaderMenusService } from 'src/app/Services/header-menus.service';
-import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { PostService } from 'src/app/Services/post.service';
 import { SharedService } from 'src/app/Services/shared.service';
+import { select, Store } from '@ngrx/store';
+import { AppState } from 'src/app/app.reducer';
 
 @Component({
   selector: 'app-home',
@@ -16,26 +20,37 @@ import { SharedService } from 'src/app/Services/shared.service';
 export class HomeComponent {
   posts!: PostDTO[];
   showButtons: boolean;
+  private userId!: string;
 
   constructor(
+    // private localStorageService: LocalStorageService,
+    // private headerMenusService: HeaderMenusService
+    
     private postService: PostService,
-    private localStorageService: LocalStorageService,
     private sharedService: SharedService,
     private router: Router,
-    private headerMenusService: HeaderMenusService
+    private store: Store<AppState>, //Añado el estado de la app
+    
   ) {
     this.showButtons = false;
-    this.loadPosts();
   }
 
   ngOnInit(): void {
-    this.headerMenusService.headerManagement.subscribe(
-      (headerInfo: HeaderMenus) => {
-        if (headerInfo) {
-          this.showButtons = headerInfo.showAuthSection;
+    // this.headerMenusService.headerManagement.subscribe(
+    //   (headerInfo: HeaderMenus) => {
+    //     if (headerInfo) {
+    //       this.showButtons = headerInfo.showAuthSection;
+    //     }
+    //   }
+    // );
+
+    this.store.pipe(select(selectUserId)).subscribe((userId) => {
+        this.showButtons = !!userId;
+        if (userId) {
+          this.userId = userId;
+          this.loadPosts(userId);
         }
-      }
-    );
+    })
   }
   // private async loadPosts(): Promise<void> {
   //   let errorResponse: any;
@@ -51,24 +66,20 @@ export class HomeComponent {
   //   }
   // }
 
-  private loadPosts(): void {
-    const userId = this.localStorageService.get('user_id');
-    if (!userId) {
-      return
+  private loadPosts(userId: string): void {
+    // const userId = this.localStorageService.get('user_id');
+      this.postService.getPostsByUserId(userId).subscribe({
+        next: (posts) => { //esperamos los posts de la API
+          this.posts = posts; //Los recogemos
+          this.showButtons = true
+        },
+        error: (error: any) => {
+          this.showButtons = false;
+          this.sharedService.errorLog(error.error);
+        }
+      });
     }
-
-    this.postService.getPosts().subscribe({
-      next: (posts) => { //esperamos los posts de la API
-        this.posts = posts; //Los recogemos
-        this.showButtons = true
-      },
-      error: (error: any) => {
-        this.showButtons = false;
-        this.sharedService.errorLog(error.error);
-      }
-    });
-  }
-
+  
   // async like(postId: string): Promise<void> {
   //   let errorResponse: any;
   //   try {
@@ -84,7 +95,7 @@ export class HomeComponent {
 
     this.postService.likePost(postId).subscribe({
       next: () => { //Aqui no hace falta recoger ningún post de la API
-        this.loadPosts();
+        this.loadPosts(this.userId);
       },
       error: (error: any) => {
         this.sharedService.errorLog(error.error);
@@ -107,7 +118,7 @@ export class HomeComponent {
 
     this.postService.dislikePost(postId).subscribe({
       next: () => { //Aqui no hace falta recoger ningún post de la API
-        this.loadPosts();
+        this.loadPosts(this.userId);
       },
       error: (error: any) => {
         this.sharedService.errorLog(error.error);
