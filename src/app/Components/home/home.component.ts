@@ -35,15 +35,14 @@ export class HomeComponent {
         this.showButtons = !!userId;
         if (userId) {
           this.userId = userId;
-          this.loadPosts(userId);
+          this.loadAllPosts();
         }
     })
   }
 
 
-  private loadPosts(userId: string): void {
-    // const userId = this.localStorageService.get('user_id');
-      this.postService.getPostsByUserId(userId).subscribe({
+  private loadAllPosts(): void {
+      this.postService.getAllPosts().subscribe({ 
         next: (posts) => { //esperamos los posts de la API
           this.posts = posts; //Los recogemos
           this.showButtons = true
@@ -61,7 +60,7 @@ export class HomeComponent {
 
     this.postService.likePost(postId).subscribe({
       next: () => { //Aqui no hace falta recoger ningún post de la API
-        this.loadPosts(this.userId);
+        this.loadAllPosts();
       },
       error: (error: any) => {
         this.sharedService.errorLog(error.error);
@@ -75,7 +74,7 @@ export class HomeComponent {
 
     this.postService.dislikePost(postId).subscribe({
       next: () => { //Aqui no hace falta recoger ningún post de la API
-        this.loadPosts(this.userId);
+        this.loadAllPosts();
       },
       error: (error: any) => {
         this.sharedService.errorLog(error.error);

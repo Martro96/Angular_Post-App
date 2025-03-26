@@ -17,20 +17,19 @@ export class AuthEffects {
 
 //Efecto Login
 
-login$ = createEffect( () =>
+login$ = createEffect(() =>
     this.actions$.pipe(
-        ofType(AuthActions.login),
-        mergeMap(({credentials }) => 
+      ofType(AuthActions.login),
+      mergeMap(({ credentials }) =>
         this.authService.login(credentials).pipe(
-            map((authData) => 
-                AuthActions.loginSuccess({
-                    auth: {
-                        ...credentials, 
-                        ...authData
-                    }
-                })),
-            catchError((error) => of (AuthActions.loginFailure({error})))
-        ))
-))
-
-}
+          map((authData) => {
+            const fullAuth = { ...credentials, ...authData };
+            this.router.navigateByUrl('home'); 
+            return AuthActions.loginSuccess({ auth: fullAuth });
+          }),
+          catchError((error) => of(AuthActions.loginFailure({ error })))
+        )
+      )
+    )
+  );
+}  

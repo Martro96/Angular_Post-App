@@ -18,7 +18,13 @@ import { AuthInterceptorService } from './Services/auth-interceptor.service';
 import { FormatDatePipe } from './Pipes/format-date.pipe';
 import { DashboardComponent } from './Components/dashboard/dashboard.component';
 import { StoreModule } from '@ngrx/store';
+import { authReducer } from './Auth/reducers/auth.reducer';
 import { EffectsModule } from '@ngrx/effects';
+import { AuthEffects } from './Auth/effects/auth.effects';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { environment } from '../environments/environment'; 
+
+
 
 @NgModule({
   declarations: [
@@ -41,8 +47,14 @@ import { EffectsModule } from '@ngrx/effects';
     AppRoutingModule,
     ReactiveFormsModule,
     HttpClientModule,
-    StoreModule.forRoot({}, {}),
-    EffectsModule.forRoot([]),
+    StoreModule.forRoot({
+      auth: authReducer
+    }, {}),
+    EffectsModule.forRoot([AuthEffects]),
+    StoreDevtoolsModule.instrument({
+      maxAge: 25,
+      logOnly: environment.production,
+    }),
   ],
   providers: [
     {

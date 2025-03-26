@@ -42,6 +42,9 @@ export class PostService {
       .get<PostDTO[]>('http://localhost:3000/users/posts/' + userId)
   }
   
+  getAllPosts(): Observable <PostDTO[]> {
+    return this.http.get<PostDTO[]>('http://localhost:3000/posts')
+  }
   // createPost(post: PostDTO): Promise<PostDTO> {
   //   return this.http.post<PostDTO>(this.urlBlogUocApi, post).toPromise();
   // }
