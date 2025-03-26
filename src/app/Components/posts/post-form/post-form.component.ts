@@ -10,9 +10,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CategoryDTO } from 'src/app/Models/category.dto';
 import { PostDTO } from 'src/app/Models/post.dto';
 import { CategoryService } from 'src/app/Services/category.service';
-import { LocalStorageService } from 'src/app/Services/local-storage.service';
 import { PostService } from 'src/app/Services/post.service';
 import { SharedService } from 'src/app/Services/shared.service';
+import { AppState } from 'src/app/app.reducer';
+import { select, Store } from '@ngrx/store';
+import { selectUserId } from 'src/app/Auth/reducers/auth.selectors';
 
 @Component({
   selector: 'app-post-form',
@@ -34,6 +36,8 @@ export class PostFormComponent implements OnInit {
   private isUpdateMode: boolean;
   private validRequest: boolean;
   private postId: string | null;
+  private userId!: string;
+
 
   categoriesList!: CategoryDTO[];
 
@@ -43,8 +47,9 @@ export class PostFormComponent implements OnInit {
     private formBuilder: UntypedFormBuilder,
     private router: Router,
     private sharedService: SharedService,
-    private localStorageService: LocalStorageService,
-    private categoryService: CategoryService
+    private categoryService: CategoryService,
+    private store: Store<AppState>
+    
   ) {
     this.isValidForm = null;
     this.postId = this.activatedRoute.snapshot.paramMap.get('id');
@@ -73,7 +78,7 @@ export class PostFormComponent implements OnInit {
     this.categories = new UntypedFormControl([]);
 
     // get categories by user and load multi select
-    this.loadCategories();
+    // this.loadCategories();
 
     this.postForm = this.formBuilder.group({
       title: this.title,
@@ -100,24 +105,55 @@ export class PostFormComponent implements OnInit {
   //   }
   // }
 
-  private loadCategories(): void {
-    const userId = this.localStorageService.get('user_id');
-    
-    if (!userId) {
-      return;
-    }
-    
-    this.categoryService.getCategoriesByUserId(userId).subscribe({
-      next: (categories) => {
-        this.categoriesList = categories;
-      },
-
-      error: (error: any) => {
-        this.sharedService.errorLog(error.error);
+  ngOnInit(): void {
+    this.store.pipe(select(selectUserId)).subscribe((userId) => {
+      if (!userId) return;
+  
+      this.userId = userId;
+  
+      // Cargamos categorías del usuario
+      this.categoryService.getCategoriesByUserId(userId).subscribe({
+        next: (categories) => {
+          this.categoriesList = categories;
+        },
+        error: (error: any) => {
+          this.sharedService.errorLog(error.error);
+        },
+      });
+  
+      // Si estamos editando, cargamos los datos del post
+      if (this.postId) {
+        this.isUpdateMode = true;
+        this.loadPostById(this.postId);
       }
     });
   }
-
+  
+  private loadPostById(postId: string): void {
+    this.postService.getPostById(postId).subscribe({
+      next: (post) => {
+        this.post = post;
+  
+        this.title.setValue(post.title);
+        this.description.setValue(post.description);
+        this.publication_date.setValue(
+          formatDate(post.publication_date, 'yyyy-MM-dd', 'en')
+        );
+  
+        const categoriesIds = post.categories.map(
+          (cat: CategoryDTO) => cat.categoryId
+        );
+        this.categories.setValue(categoriesIds);
+  
+        this.num_likes.setValue(post.num_likes);
+        this.num_dislikes.setValue(post.num_dislikes);
+      },
+      error: (error) => {
+        this.sharedService.errorLog(error.error);
+      },
+    });
+  }
+  
   // async ngOnInit(): Promise<void> {
   //   let errorResponse: any;
   //   // update
@@ -159,40 +195,6 @@ export class PostFormComponent implements OnInit {
   //   }
   // }
 
-  ngOnInit(): void {
-    this.isUpdateMode = false;
-
-    // update
-    if (!this.postId) {
-      return;
-    }
-
-    this.postService.getPostById(this.postId).subscribe({
-      next: (post) => {
-        this.isUpdateMode = true;
-        this.post = post;
-
-        this.title.setValue(this.post.title);
-        this.description.setValue(this.post.description);
-        this.publication_date.setValue(
-          formatDate(this.post.publication_date, 'yyyy-MM-dd', 'en')
-        );
-
-        //Aquí cambio el .push a map como hicimos en la teoría
-        const categoriesIds = post.categories.map((category: CategoryDTO) => category.categoryId);
-
-        this.categories.setValue(categoriesIds);
-
-        this.num_likes.setValue(this.post.num_likes);
-        this.num_dislikes.setValue(this.post.num_dislikes);
-
-
-      },
-      error: (error) => {
-        this.sharedService.errorLog(error.error);
-      }
-    });
-  }
 
 
   // private async editPost(): Promise<boolean> {
@@ -224,18 +226,18 @@ export class PostFormComponent implements OnInit {
   //   return responseOK;
   // }
 
-  
+
   private editPost(): void {
 
-      const userId = this.localStorageService.get('user_id');
 
-      if (!userId || !this.postId) {
+      if (!this.userId || !this.postId) {
         return;
       }
       
-      // this.post.userId = userId;
+      // this.post.userId = this.userId;
+
       if (this.post) {
-        this.post.userId = userId;
+        this.post.userId = this.userId;
       }
 
       this.postService.updatePost(this.postId, this.post).subscribe({
@@ -279,11 +281,10 @@ export class PostFormComponent implements OnInit {
 
   private createPost(): void {
 
-    const userId = this.localStorageService.get('user_id');
-    if (!userId) {
+    if (!this.userId) {
       return;
     }
-    this.post.userId = userId;
+    this.post.userId = this.userId;
       
     this.postService.createPost(this.post).subscribe({
       next: (post) => {
@@ -316,41 +317,51 @@ export class PostFormComponent implements OnInit {
 
   savePost(): void {
     this.isValidForm = false;
-
+  
     if (this.postForm.invalid) {
       return;
     }
-
+  
     this.isValidForm = true;
     this.post = this.postForm.value;
-    this.post.userId = this.localStorageService.get('user_id')!;
-
+    this.post.userId = this.userId;
+  
     if (this.isUpdateMode && this.postId) {
+      // this.post.categoryId = this.postId;
       this.postService.updatePost(this.postId, this.post).subscribe({
         next: () => {
           this.validRequest = true;
           this.sharedService.managementToast('postFeedback', true);
           this.router.navigateByUrl('posts');
-        }, 
+        },
         error: (error) => {
-          this.validRequest = false; // Si falló la petición
+          this.validRequest = false;
           this.sharedService.errorLog(error.error);
-          this.sharedService.managementToast('postFeedback', false, error.error);
-        }
+          this.sharedService.managementToast(
+            'postFeedback',
+            false,
+            error.error
+          );
+        },
       });
     } else {
       this.postService.createPost(this.post).subscribe({
         next: () => {
           this.validRequest = true;
           this.sharedService.managementToast('postFeedback', true);
-          this.router.navigateByUrl('posts'); // Redirigir tras crear
+          this.router.navigateByUrl('posts');
         },
         error: (error) => {
           this.validRequest = false;
           this.sharedService.errorLog(error.error);
-          this.sharedService.managementToast('postFeedback', false, error.error);
-        }
+          this.sharedService.managementToast(
+            'postFeedback',
+            false,
+            error.error
+          );
+        },
       });
     }
   }
+  
 }
