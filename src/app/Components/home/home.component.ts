@@ -1,8 +1,3 @@
-// import { error } from 'console';
-// import { HeaderMenus } from 'src/app/Models/header-menus.dto';
-// import { HeaderMenusService } from 'src/app/Services/header-menus.service';
-// import { LocalStorageService } from 'src/app/Services/local-storage.service';
-
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { selectUserId } from 'src/app/Auth/reducers/auth.selectors';
@@ -23,7 +18,6 @@ export class HomeComponent {
   private userId!: string;
 
   constructor(
-    // private localStorageService: LocalStorageService,
     // private headerMenusService: HeaderMenusService
     
     private postService: PostService,
@@ -36,13 +30,6 @@ export class HomeComponent {
   }
 
   ngOnInit(): void {
-    // this.headerMenusService.headerManagement.subscribe(
-    //   (headerInfo: HeaderMenus) => {
-    //     if (headerInfo) {
-    //       this.showButtons = headerInfo.showAuthSection;
-    //     }
-    //   }
-    // );
 
     this.store.pipe(select(selectUserId)).subscribe((userId) => {
         this.showButtons = !!userId;
@@ -52,19 +39,7 @@ export class HomeComponent {
         }
     })
   }
-  // private async loadPosts(): Promise<void> {
-  //   let errorResponse: any;
-  //   const userId = this.localStorageService.get('user_id');
-  //   if (userId) {
-  //     this.showButtons = true;
-  //   }
-  //   try {
-  //     this.posts = await this.postService.getPosts();
-  //   } catch (error: any) {
-  //     errorResponse = error.error;
-  //     this.sharedService.errorLog(errorResponse);
-  //   }
-  // }
+
 
   private loadPosts(userId: string): void {
     // const userId = this.localStorageService.get('user_id');
@@ -80,16 +55,7 @@ export class HomeComponent {
       });
     }
   
-  // async like(postId: string): Promise<void> {
-  //   let errorResponse: any;
-  //   try {
-  //     await this.postService.likePost(postId);
-  //     this.loadPosts();
-  //   } catch (error: any) {
-  //     errorResponse = error.error;
-  //     this.sharedService.errorLog(errorResponse);
-  //   }
-  // }
+
 
   like(postId: string): void { 
 
@@ -104,16 +70,7 @@ export class HomeComponent {
   }
 
 
-  // async dislike(postId: string): Promise<void> {
-  //   let errorResponse: any;
-  //   try {
-  //     await this.postService.dislikePost(postId);
-  //     this.loadPosts();
-  //   } catch (error: any) {
-  //     errorResponse = error.error;
-  //     this.sharedService.errorLog(errorResponse);
-  //   }
-  // }
+
   dislike(postId: string): void {
 
     this.postService.dislikePost(postId).subscribe({

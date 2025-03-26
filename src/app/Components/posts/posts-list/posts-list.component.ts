@@ -23,19 +23,6 @@ export class PostsListComponent {
     private store: Store<AppState>
   ) {}
 
-  // private async loadPosts(): Promise<void> {
-  //   let errorResponse: any;
-  //   const userId = this.localStorageService.get('user_id');
-  //   if (userId) {
-  //     try {
-  //       this.posts = await this.postService.getPostsByUserId(userId);
-  //     } catch (error: any) {
-  //       errorResponse = error.error;
-  //       this.sharedService.errorLog(errorResponse);
-  //     }
-  //   }
-  // }
-
   ngOnInit(): void {
     this.store.pipe(select(selectUserId)).subscribe((userId) => {
       if (userId) {
@@ -65,23 +52,7 @@ export class PostsListComponent {
     this.router.navigateByUrl('/user/post/' + postId);
   }
 
-  // async deletePost(postId: string): Promise<void> {
-  //   let errorResponse: any;
-
-  //   // show confirmation popup
-  //   let result = confirm('Confirm delete post with id: ' + postId + ' .');
-  //   if (result) {
-  //     try {
-  //       const rowsAffected = await this.postService.deletePost(postId);
-  //       if (rowsAffected.affected > 0) {
-  //         this.loadPosts();
-  //       }
-  //     } catch (error: any) {
-  //       errorResponse = error.error;
-  //       this.sharedService.errorLog(errorResponse);
-  //     }
-  //   }
-  // }
+  
   deletePost(postId: string): void {
     if (!postId) {
       return;
